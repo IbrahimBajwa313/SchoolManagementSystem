@@ -1,0 +1,105 @@
+-- MongoDB Collections Schema (for reference)
+-- This file documents the MongoDB collections structure
+
+-- Students Collection
+-- {
+--   _id: ObjectId,
+--   studentId: "STU001",
+--   firstName: "John",
+--   lastName: "Doe",
+--   email: "john.doe@email.com",
+--   phone: "+91 9876543210",
+--   dateOfBirth: ISODate("2008-05-15"),
+--   gender: "Male",
+--   address: {
+--     street: "123 Main Street",
+--     city: "Mumbai",
+--     state: "Maharashtra",
+--     pincode: "400001"
+--   },
+--   class: "10",
+--   section: "A",
+--   rollNumber: "10A001",
+--   admissionDate: ISODate("2020-04-01"),
+--   parentDetails: {
+--     fatherName: "Robert Doe",
+--     motherName: "Jane Doe",
+--     guardianPhone: "+91 9876543210",
+--     guardianEmail: "parent@email.com"
+--   },
+--   feeStructure: {
+--     tuitionFee: 15000,
+--     transportFee: 3000,
+--     libraryFee: 500,
+--     examFee: 1000,
+--     miscFee: 500
+--   },
+--   status: "Active",
+--   createdAt: ISODate(),
+--   updatedAt: ISODate()
+-- }
+
+-- Fee Records Collection
+-- {
+--   _id: ObjectId,
+--   studentId: "STU001",
+--   academicYear: "2024-25",
+--   month: "January",
+--   feeType: "Tuition",
+--   amount: 15000,
+--   dueDate: ISODate("2024-01-15"),
+--   paidDate: ISODate("2024-01-10"),
+--   paymentMethod: "Online",
+--   transactionId: "TXN123456789",
+--   status: "Paid",
+--   lateFee: 0,
+--   discount: 0,
+--   remarks: "Payment received on time",
+--   createdAt: ISODate(),
+--   updatedAt: ISODate()
+-- }
+
+-- Teachers Collection
+-- {
+--   _id: ObjectId,
+--   teacherId: "TCH001",
+--   firstName: "Sarah",
+--   lastName: "Johnson",
+--   email: "sarah.johnson@school.edu",
+--   phone: "+91 9876543210",
+--   subject: ["Mathematics", "Physics"],
+--   classes: ["10A", "10B", "11A"],
+--   qualification: "M.Sc Mathematics, B.Ed",
+--   experience: 8,
+--   salary: 45000,
+--   joiningDate: ISODate("2018-06-01"),
+--   status: "Active",
+--   createdAt: ISODate(),
+--   updatedAt: ISODate()
+-- }
+
+-- Classes Collection
+-- {
+--   _id: ObjectId,
+--   className: "10",
+--   section: "A",
+--   classTeacher: "TCH001",
+--   subjects: ["Mathematics", "Physics", "Chemistry", "Biology", "English"],
+--   maxStudents: 40,
+--   currentStudents: 38,
+--   academicYear: "2024-25",
+--   createdAt: ISODate(),
+--   updatedAt: ISODate()
+-- }
+
+-- Admins Collection
+-- {
+--   _id: ObjectId,
+--   username: "admin",
+--   password: "hashed_password",
+--   email: "admin@school.edu",
+--   role: "SuperAdmin",
+--   permissions: ["all"],
+--   createdAt: ISODate(),
+--   updatedAt: ISODate()
+-- }
