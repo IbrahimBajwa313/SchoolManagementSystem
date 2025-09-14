@@ -353,15 +353,6 @@ export default function TeacherManagement() {
     }
   }
 
-  const filteredTeachers = teachers.filter((teacher) => {
-    const matchesSearch =
-      teacher.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      teacher.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      teacher.teacherId.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesSubject = subjectFilter === "All" || teacher.subject.some((s) => s.includes(subjectFilter))
-    const matchesStatus = statusFilter === "All" || teacher.status === statusFilter
-    return matchesSearch && matchesSubject && matchesStatus
-  })
 
   return (
     <div className="min-h-screen bg-background">

@@ -17,6 +17,11 @@ export const metadata: Metadata = {
     'Modern Learning',
   ],
   authors: [{ name: 'Greenwood International School Team' }],
+  icons: {
+    icon: '/icon.svg',
+    shortcut: '/icon.svg',
+    apple: '/icon.svg',
+  },
   openGraph: {
     title: 'Greenwood International School',
     description:
