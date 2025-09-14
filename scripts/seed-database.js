@@ -1,6 +1,7 @@
 // MongoDB Database Seeding Script
 // Run this script to populate the database with sample data
 
+require('dotenv').config({ path: '.env.local' })
 const { MongoClient } = require("mongodb")
 
 const MONGODB_URI = process.env.MONGODB_URI || "mongodb://localhost:27017"
@@ -82,10 +83,34 @@ const sampleStudents = [
 const sampleFees = [
   {
     studentId: "STU001",
+    studentName: "Rahul Kumar",
+    class: "10-A",
     academicYear: "2024-25",
     month: "January",
-    feeType: "Tuition",
-    amount: 15000,
+    billNumber: "BILL-2024-001",
+    feeItems: [
+      {
+        feeType: "Tuition",
+        amount: 15000,
+        description: "Monthly tuition fee for Class 10-A"
+      },
+      {
+        feeType: "Transport",
+        amount: 3000,
+        description: "Monthly bus transport fee"
+      },
+      {
+        feeType: "Library",
+        amount: 500,
+        description: "Library maintenance and book fee"
+      },
+      {
+        feeType: "Laboratory",
+        amount: 1000,
+        description: "Science laboratory fee"
+      }
+    ],
+    totalAmount: 19500,
     dueDate: new Date("2024-01-15"),
     paidDate: new Date("2024-01-10"),
     paymentMethod: "Online",
@@ -99,14 +124,100 @@ const sampleFees = [
   },
   {
     studentId: "STU002",
+    studentName: "Priya Sharma",
+    class: "8-B",
     academicYear: "2024-25",
     month: "January",
-    feeType: "Tuition",
-    amount: 12000,
+    billNumber: "BILL-2024-002",
+    feeItems: [
+      {
+        feeType: "Tuition",
+        amount: 12000,
+        description: "Monthly tuition fee for Class 8-B"
+      },
+      {
+        feeType: "Transport",
+        amount: 2500,
+        description: "Monthly bus transport fee"
+      },
+      {
+        feeType: "Library",
+        amount: 400,
+        description: "Library maintenance and book fee"
+      }
+    ],
+    totalAmount: 14900,
     dueDate: new Date("2024-01-15"),
     status: "Pending",
     lateFee: 0,
     discount: 0,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  },
+  {
+    studentId: "STU001",
+    studentName: "Rahul Kumar",
+    class: "10-A",
+    academicYear: "2024-25",
+    month: "February",
+    billNumber: "BILL-2024-003",
+    feeItems: [
+      {
+        feeType: "Tuition",
+        amount: 15000,
+        description: "Monthly tuition fee for Class 10-A"
+      },
+      {
+        feeType: "Transport",
+        amount: 3000,
+        description: "Monthly bus transport fee"
+      },
+      {
+        feeType: "Examination",
+        amount: 800,
+        description: "Mid-term examination fee"
+      }
+    ],
+    totalAmount: 18800,
+    dueDate: new Date("2024-02-15"),
+    status: "Overdue",
+    lateFee: 200,
+    discount: 0,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  },
+  {
+    studentId: "STU002",
+    studentName: "Priya Sharma",
+    class: "8-B",
+    academicYear: "2024-25",
+    month: "February",
+    billNumber: "BILL-2024-004",
+    feeItems: [
+      {
+        feeType: "Tuition",
+        amount: 12000,
+        description: "Monthly tuition fee for Class 8-B"
+      },
+      {
+        feeType: "Transport",
+        amount: 2500,
+        description: "Monthly bus transport fee"
+      },
+      {
+        feeType: "Sports",
+        amount: 600,
+        description: "Sports activities and equipment fee"
+      }
+    ],
+    totalAmount: 15100,
+    dueDate: new Date("2024-02-15"),
+    paidDate: new Date("2024-02-12"),
+    paymentMethod: "UPI",
+    transactionId: "UPI789456123",
+    status: "Paid",
+    lateFee: 0,
+    discount: 100,
     createdAt: new Date(),
     updatedAt: new Date(),
   },
@@ -147,6 +258,51 @@ const sampleTeachers = [
   },
 ]
 
+const sampleAttendance = [
+  {
+    studentId: "STU001",
+    studentName: "Rahul Kumar",
+    class: "10-A",
+    date: new Date().toISOString().split('T')[0],
+    status: "Present",
+    timeIn: "08:30",
+    timeOut: "15:30",
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  },
+  {
+    studentId: "STU002",
+    studentName: "Priya Sharma",
+    class: "8-B",
+    date: new Date().toISOString().split('T')[0],
+    status: "Present",
+    timeIn: "08:25",
+    timeOut: "15:35",
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  },
+  {
+    studentId: "STU001",
+    studentName: "Rahul Kumar",
+    class: "10-A",
+    date: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split('T')[0], // Yesterday
+    status: "Absent",
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  },
+  {
+    studentId: "STU002",
+    studentName: "Priya Sharma",
+    class: "8-B",
+    date: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split('T')[0], // Yesterday
+    status: "Late",
+    timeIn: "09:15",
+    timeOut: "15:30",
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  },
+]
+
 async function seedDatabase() {
   const client = new MongoClient(MONGODB_URI)
 
@@ -160,6 +316,7 @@ async function seedDatabase() {
     await db.collection("students").deleteMany({})
     await db.collection("fees").deleteMany({})
     await db.collection("teachers").deleteMany({})
+    await db.collection("attendance").deleteMany({})
 
     // Insert sample data
     await db.collection("students").insertMany(sampleStudents)
@@ -170,6 +327,9 @@ async function seedDatabase() {
 
     await db.collection("teachers").insertMany(sampleTeachers)
     console.log("Inserted sample teachers")
+
+    await db.collection("attendance").insertMany(sampleAttendance)
+    console.log("Inserted sample attendance records")
 
     console.log("Database seeded successfully!")
   } catch (error) {

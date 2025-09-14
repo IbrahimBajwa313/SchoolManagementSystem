@@ -1,62 +1,165 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-import { Calendar, Search, Filter, Download, Plus, Eye, CheckCircle, XCircle, Clock, Users } from "lucide-react"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Calendar, Search, Filter, Download, Plus, Eye, CheckCircle, XCircle, Clock, Users, Edit } from "lucide-react"
 import Link from "next/link"
 
-// Mock data for attendance
-const attendanceData = [
-  {
-    id: "1",
-    studentId: "STU001",
-    studentName: "Rahul Kumar",
-    class: "10-A",
-    date: "2024-01-15",
-    status: "Present",
-    timeIn: "08:30",
-    timeOut: "15:30",
-  },
-  {
-    id: "2",
-    studentId: "STU002",
-    studentName: "Priya Sharma",
-    class: "8-B",
-    date: "2024-01-15",
-    status: "Absent",
-    timeIn: null,
-    timeOut: null,
-  },
-  {
-    id: "3",
-    studentId: "STU003",
-    studentName: "Arjun Patel",
-    class: "12-A",
-    date: "2024-01-15",
-    status: "Late",
-    timeIn: "09:15",
-    timeOut: "15:30",
-  },
-  {
-    id: "4",
-    studentId: "STU004",
-    studentName: "Sneha Reddy",
-    class: "9-C",
-    date: "2024-01-15",
-    status: "Present",
-    timeIn: "08:25",
-    timeOut: "15:30",
-  },
-]
+interface AttendanceRecord {
+  _id: string
+  studentId: string
+  studentName: string
+  class: string
+  date: string
+  status: "Present" | "Absent" | "Late"
+  timeIn?: string
+  timeOut?: string
+}
 
 export default function AttendanceManagement() {
+  const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>([])
   const [searchTerm, setSearchTerm] = useState("")
   const [classFilter, setClassFilter] = useState("All")
   const [statusFilter, setStatusFilter] = useState("All")
-  const [selectedDate, setSelectedDate] = useState("2024-01-15")
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0])
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+  const [selectedRecord, setSelectedRecord] = useState<AttendanceRecord | null>(null)
+  const [formData, setFormData] = useState({
+    studentId: "",
+    studentName: "",
+    class: "",
+    date: "",
+    status: "Present" as "Present" | "Absent" | "Late",
+    timeIn: "",
+    timeOut: ""
+  })
+
+  useEffect(() => {
+    fetchAttendanceRecords()
+  }, [selectedDate, classFilter, statusFilter])
+
+  const fetchAttendanceRecords = async () => {
+    try {
+      const params = new URLSearchParams()
+      if (selectedDate) params.append("date", selectedDate)
+      if (classFilter !== "All") params.append("class", classFilter)
+      if (statusFilter !== "All") params.append("status", statusFilter)
+
+      const response = await fetch(`/api/attendance?${params}`)
+      const data = await response.json()
+      
+      if (data.success) {
+        setAttendanceRecords(data.data)
+      }
+    } catch (error) {
+      console.error("Error fetching attendance records:", error)
+    }
+  }
+
+  const handleAddRecord = async () => {
+    try {
+      const response = await fetch("/api/attendance", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(formData),
+      })
+
+      const data = await response.json()
+      
+      if (data.success) {
+        setIsAddDialogOpen(false)
+        resetForm()
+        fetchAttendanceRecords()
+      }
+    } catch (error) {
+      console.error("Error adding attendance record:", error)
+    }
+  }
+
+  const handleEditRecord = (record: AttendanceRecord) => {
+    setSelectedRecord(record)
+    setFormData({
+      studentId: record.studentId,
+      studentName: record.studentName,
+      class: record.class,
+      date: record.date,
+      status: record.status,
+      timeIn: record.timeIn || "",
+      timeOut: record.timeOut || ""
+    })
+    setIsEditDialogOpen(true)
+  }
+
+  const handleUpdateRecord = async () => {
+    if (!selectedRecord) return
+
+    try {
+      const response = await fetch(`/api/attendance/${selectedRecord._id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(formData),
+      })
+
+      const data = await response.json()
+      
+      if (data.success) {
+        setIsEditDialogOpen(false)
+        setSelectedRecord(null)
+        resetForm()
+        fetchAttendanceRecords()
+      }
+    } catch (error) {
+      console.error("Error updating attendance record:", error)
+    }
+  }
+
+  const handleDeleteRecord = async (recordId: string) => {
+    if (!confirm("Are you sure you want to delete this attendance record?")) return
+
+    try {
+      const response = await fetch(`/api/attendance/${recordId}`, {
+        method: "DELETE",
+      })
+
+      const data = await response.json()
+      
+      if (data.success) {
+        fetchAttendanceRecords()
+      }
+    } catch (error) {
+      console.error("Error deleting attendance record:", error)
+    }
+  }
+
+  const resetForm = () => {
+    setFormData({
+      studentId: "",
+      studentName: "",
+      class: "",
+      date: selectedDate,
+      status: "Present",
+      timeIn: "",
+      timeOut: ""
+    })
+  }
+
+  const updateFormField = (field: string, value: any) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }))
+  }
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -86,7 +189,7 @@ export default function AttendanceManagement() {
     }
   }
 
-  const filteredAttendance = attendanceData.filter((record) => {
+  const filteredAttendance = attendanceRecords.filter((record) => {
     const matchesSearch =
       record.studentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       record.studentId.toLowerCase().includes(searchTerm.toLowerCase())
@@ -95,11 +198,83 @@ export default function AttendanceManagement() {
     return matchesSearch && matchesClass && matchesStatus
   })
 
-  const presentCount = attendanceData.filter((r) => r.status === "Present").length
-  const absentCount = attendanceData.filter((r) => r.status === "Absent").length
-  const lateCount = attendanceData.filter((r) => r.status === "Late").length
-  const totalStudents = attendanceData.length
-  const attendancePercentage = (((presentCount + lateCount) / totalStudents) * 100).toFixed(1)
+  const presentCount = attendanceRecords.filter((r) => r.status === "Present").length
+  const absentCount = attendanceRecords.filter((r) => r.status === "Absent").length
+  const lateCount = attendanceRecords.filter((r) => r.status === "Late").length
+  const totalStudents = attendanceRecords.length
+  const attendancePercentage = totalStudents > 0 ? (((presentCount + lateCount) / totalStudents) * 100).toFixed(1) : "0"
+
+  const AttendanceForm = ({ isEdit = false }: { isEdit?: boolean }) => (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="space-y-2">
+        <Label htmlFor="studentId">Student ID *</Label>
+        <Input
+          id="studentId"
+          value={formData.studentId}
+          onChange={(e) => updateFormField('studentId', e.target.value)}
+          placeholder="Enter student ID"
+        />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="studentName">Student Name *</Label>
+        <Input
+          id="studentName"
+          value={formData.studentName}
+          onChange={(e) => updateFormField('studentName', e.target.value)}
+          placeholder="Enter student name"
+        />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="class">Class *</Label>
+        <Input
+          id="class"
+          value={formData.class}
+          onChange={(e) => updateFormField('class', e.target.value)}
+          placeholder="e.g., 10-A"
+        />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="date">Date *</Label>
+        <Input
+          id="date"
+          type="date"
+          value={formData.date}
+          onChange={(e) => updateFormField('date', e.target.value)}
+        />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="status">Status *</Label>
+        <Select value={formData.status} onValueChange={(value) => updateFormField('status', value)}>
+          <SelectTrigger>
+            <SelectValue placeholder="Select status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="Present">Present</SelectItem>
+            <SelectItem value="Absent">Absent</SelectItem>
+            <SelectItem value="Late">Late</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="timeIn">Time In</Label>
+        <Input
+          id="timeIn"
+          type="time"
+          value={formData.timeIn}
+          onChange={(e) => updateFormField('timeIn', e.target.value)}
+        />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="timeOut">Time Out</Label>
+        <Input
+          id="timeOut"
+          type="time"
+          value={formData.timeOut}
+          onChange={(e) => updateFormField('timeOut', e.target.value)}
+        />
+      </div>
+    </div>
+  )
 
   return (
     <div className="min-h-screen bg-background">
@@ -117,7 +292,7 @@ export default function AttendanceManagement() {
               </div>
             </div>
             <div className="flex items-center space-x-4">
-              <Button>
+              <Button onClick={() => setIsAddDialogOpen(true)}>
                 <Plus className="h-4 w-4 mr-2" />
                 Mark Attendance
               </Button>
@@ -259,7 +434,7 @@ export default function AttendanceManagement() {
                 </thead>
                 <tbody>
                   {filteredAttendance.map((record) => (
-                    <tr key={record.id} className="border-b hover:bg-muted/50">
+                    <tr key={record._id} className="border-b hover:bg-muted/50">
                       <td className="p-4">
                         <div>
                           <div className="font-medium">{record.studentName}</div>
@@ -287,8 +462,8 @@ export default function AttendanceManagement() {
                           <Button size="sm" variant="outline">
                             <Eye className="h-3 w-3" />
                           </Button>
-                          <Button size="sm" variant="outline">
-                            Edit
+                          <Button size="sm" variant="outline" onClick={() => handleEditRecord(record)}>
+                            <Edit className="h-3 w-3" />
                           </Button>
                         </div>
                       </td>
@@ -352,6 +527,44 @@ export default function AttendanceManagement() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Add Attendance Dialog */}
+        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Mark Attendance</DialogTitle>
+              <DialogDescription>
+                Add a new attendance record for a student.
+              </DialogDescription>
+            </DialogHeader>
+            <AttendanceForm />
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleAddRecord}>Add Record</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Edit Attendance Dialog */}
+        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Edit Attendance</DialogTitle>
+              <DialogDescription>
+                Update the attendance record details.
+              </DialogDescription>
+            </DialogHeader>
+            <AttendanceForm isEdit={true} />
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleUpdateRecord}>Update Record</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </main>
     </div>
   )
