@@ -223,9 +223,7 @@ export default function TeacherManagement() {
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
-              <Link href="/admin/dashboard" className="text-muted-foreground hover:text-primary">
-                ← Back to Dashboard
-              </Link>
+               
               <div className="flex items-center space-x-2">
                 <BookOpen className="h-8 w-8 text-primary" />
                 <h1 className="text-2xl font-bold text-card-foreground">Teacher Management</h1>
