@@ -10,6 +10,8 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { DollarSign, Search, Filter, Download, Plus, Eye, Edit, AlertTriangle, CheckCircle, Clock, Trash2 } from "lucide-react"
 import Link from "next/link"
+import { AdminLayout } from "@/components/AdminLayout"
+import { PageLoader } from "@/components/LoadingSpinner"
 
 interface FeeItem {
   feeType: string
@@ -97,7 +99,7 @@ export default function FeeManagement() {
 
   const fetchStudents = async () => {
     try {
-      const response = await fetch('/api/students/list')
+      const response = await fetch('/api/students')
       const data = await response.json()
       if (data.success) {
         setStudents(data.data)
@@ -208,7 +210,7 @@ export default function FeeManagement() {
   }
 
   if (loading) {
-    return <div className="flex justify-center items-center min-h-screen">Loading...</div>
+    return <PageLoader text="Loading fee records..." />
   }
 
   const filteredRecords = feeRecords.filter((record) => {
@@ -516,55 +518,44 @@ export default function FeeManagement() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b bg-card">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <Link href="/admin/dashboard" className="text-muted-foreground hover:text-primary">
-                ← Back to Dashboard
-              </Link>
-              <div className="flex items-center space-x-2">
-                <DollarSign className="h-8 w-8 text-primary" />
-                <h1 className="text-2xl font-bold text-card-foreground">Fee Management</h1>
-              </div>
-            </div>
-            <div className="flex items-center space-x-4">
-              <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Fee Record
+    <AdminLayout>
+      <div className="p-6">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">Fee Management</h1>
+            <p className="text-muted-foreground">Manage student fees, payments, and billing</p>
+          </div>
+          <div className="flex items-center space-x-4">
+            <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Fee Record
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-4xl">
+                <DialogHeader>
+                  <DialogTitle>Add New Fee Record</DialogTitle>
+                  <DialogDescription>
+                    Enter the fee record details below to add them to the system.
+                  </DialogDescription>
+                </DialogHeader>
+                <FeeForm />
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
+                    Cancel
                   </Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-4xl">
-                  <DialogHeader>
-                    <DialogTitle>Add New Fee Record</DialogTitle>
-                    <DialogDescription>
-                      Enter the fee record details below to add them to the system.
-                    </DialogDescription>
-                  </DialogHeader>
-                  <FeeForm />
-                  <DialogFooter>
-                    <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
-                      Cancel
-                    </Button>
-                    <Button onClick={handleAddFeeRecord}>Add Fee Record</Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
-              <Button variant="outline">
-                <Download className="h-4 w-4 mr-2" />
-                Export
-              </Button>
-            </div>
+                  <Button onClick={handleAddFeeRecord}>Add Fee Record</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+            <Button variant="outline">
+              <Download className="h-4 w-4 mr-2" />
+              Export
+            </Button>
           </div>
         </div>
-      </header>
-
-      {/* Main Content */}
-      <main className="container mx-auto px-4 py-8">
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <Card>
@@ -763,7 +754,7 @@ export default function FeeManagement() {
             </CardContent>
           </Card>
         </div>
-      </main>
-    </div>
+      </div>
+    </AdminLayout>
   )
 }

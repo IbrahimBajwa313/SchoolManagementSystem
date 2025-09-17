@@ -5,15 +5,6 @@ import { ObjectId } from "mongodb"
 
 export async function GET(request: NextRequest) {
   try {
-    // Check authentication
-    const user = getCurrentUser()
-    if (!user) {
-      return NextResponse.json(
-        { success: false, message: "Authentication required" },
-        { status: 401 }
-      )
-    }
-
     const client = await clientPromise
     const db = client.db("school_management")
 
@@ -26,9 +17,6 @@ export async function GET(request: NextRequest) {
     const startDate = searchParams.get("startDate")
     const endDate = searchParams.get("endDate")
 
-    // Get accessible classes for the user
-    const accessibleClasses = await getAccessibleClasses(user._id)
-    
     const query: any = {}
     if (date) query.date = new Date(date)
     
@@ -40,17 +28,7 @@ export async function GET(request: NextRequest) {
     }
     
     if (classId) {
-      // Check if user has access to this specific class
-      if (!accessibleClasses.includes(classId)) {
-        return NextResponse.json(
-          { success: false, message: "Access denied to this class" },
-          { status: 403 }
-        )
-      }
       query.classId = classId
-    } else {
-      // Limit to accessible classes only
-      query.classId = { $in: accessibleClasses }
     }
     
     if (studentId) {
@@ -105,15 +83,6 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    // Check authentication
-    const user = getCurrentUser()
-    if (!user) {
-      return NextResponse.json(
-        { success: false, message: "Authentication required" },
-        { status: 401 }
-      )
-    }
-
     const client = await clientPromise
     const db = client.db("school_management")
 
@@ -124,11 +93,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, message: "Missing required fields" }, { status: 400 })
     }
 
-    // Check if user has access to this class
-    const accessibleClasses = await getAccessibleClasses(user._id)
-    if (!accessibleClasses.includes(attendanceData.classId)) {
+    // Verify that the teacher is assigned to this class
+    const classInfo = await db.collection("classes").findOne({ _id: new ObjectId(attendanceData.classId) })
+    if (!classInfo) {
+      return NextResponse.json({ success: false, message: "Class not found" }, { status: 404 })
+    }
+
+    // Check if the teacher is the class incharge
+    if (classInfo.classIncharge !== attendanceData.markedBy) {
       return NextResponse.json(
-        { success: false, message: "Access denied to this class" },
+        { success: false, message: "You are not authorized to mark attendance for this class" },
         { status: 403 }
       )
     }
@@ -167,15 +141,6 @@ export async function POST(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
-    // Check authentication
-    const user = getCurrentUser()
-    if (!user) {
-      return NextResponse.json(
-        { success: false, message: "Authentication required" },
-        { status: 401 }
-      )
-    }
-
     const client = await clientPromise
     const db = client.db("school_management")
 
@@ -191,11 +156,16 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ success: false, message: "Attendance record not found" }, { status: 404 })
     }
 
-    // Check if user has access to this class
-    const accessibleClasses = await getAccessibleClasses(user._id)
-    if (!accessibleClasses.includes(existingRecord.classId)) {
+    // Verify that the teacher is assigned to this class
+    const classInfo = await db.collection("classes").findOne({ _id: new ObjectId(existingRecord.classId) })
+    if (!classInfo) {
+      return NextResponse.json({ success: false, message: "Class not found" }, { status: 404 })
+    }
+
+    // Check if the teacher is the class incharge (if markedBy is provided in updateData)
+    if (updateData.markedBy && classInfo.classIncharge !== updateData.markedBy) {
       return NextResponse.json(
-        { success: false, message: "Access denied to this class" },
+        { success: false, message: "You are not authorized to update attendance for this class" },
         { status: 403 }
       )
     }

@@ -21,13 +21,31 @@ export default function StaffLoginPage() {
     setLoading(true)
     setError("")
 
-    // Demo credentials: teacher123 / password123
-    if (credentials.staffId === "teacher123" && credentials.password === "password123") {
-      window.location.href = "/staff/dashboard"
-    } else {
-      setError("Invalid staff ID or password")
+    try {
+      const response = await fetch("/api/staff/auth", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          staffId: credentials.staffId,
+          password: credentials.password
+        })
+      })
+
+      const data = await response.json()
+      
+      if (data.success) {
+        // Store teacher data in localStorage (in real app, use secure session management)
+        localStorage.setItem("teacherData", JSON.stringify(data.data))
+        window.location.href = "/staff/dashboard"
+      } else {
+        setError(data.message || "Invalid staff credentials")
+      }
+    } catch (error) {
+      console.error("Login error:", error)
+      setError("Login failed. Please try again.")
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }
 
   return (
@@ -77,10 +95,13 @@ export default function StaffLoginPage() {
           <div className="mt-6 text-center text-sm text-gray-600">
             <p>Demo credentials:</p>
             <p>
-              Staff ID: <strong>teacher123</strong>
+              Staff ID: <strong>Any teacher email from admin panel</strong>
             </p>
             <p>
               Password: <strong>password123</strong>
+            </p>
+            <p className="text-xs mt-2 text-gray-500">
+              Use any teacher's email address as Staff ID
             </p>
           </div>
           <div className="mt-4 text-center">

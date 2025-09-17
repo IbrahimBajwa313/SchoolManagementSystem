@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Calendar, Search, Filter, Download, Plus, Eye, CheckCircle, XCircle, Clock, Users, Edit, UserCheck, Settings, BarChart3, BookOpen, Trash2 } from "lucide-react"
 import Link from "next/link"
+import { AdminLayout } from "@/components/AdminLayout"
 
 interface AttendanceRecord {
   _id: string
@@ -80,6 +81,7 @@ interface Teacher {
   lastName: string
   email: string
   designation: string
+  department: string
 }
 
 export default function AttendanceManagement() {
@@ -148,9 +150,10 @@ export default function AttendanceManagement() {
     }
   }
 
+
   const fetchClasses = async () => {
     try {
-      const response = await fetch("/api/classes?includeIncharge=true")
+      const response = await fetch("/api/classes")
       const data = await response.json()
       if (data.success) {
         setClasses(data.data)
@@ -176,7 +179,7 @@ export default function AttendanceManagement() {
     if (!selectedClass || !selectedTeacher) return
 
     try {
-      const response = await fetch("/api/class-incharge", {
+      const response = await fetch("/api/classes", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -254,6 +257,21 @@ export default function AttendanceManagement() {
     return matchesSearch
   })
 
+  // Group class incharges by teacher
+  const groupInchargesByTeacher = () => {
+    const grouped: { [key: string]: ClassIncharge[] } = {};
+    classIncharges.forEach(incharge => {
+      if (!incharge.teacherId) return;
+      if (!grouped[incharge.teacherId]) {
+        grouped[incharge.teacherId] = [];
+      }
+      grouped[incharge.teacherId].push(incharge);
+    });
+    return grouped;
+  }
+
+  const groupedIncharges = groupInchargesByTeacher();
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -266,32 +284,21 @@ export default function AttendanceManagement() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b bg-card">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <Link href="/admin/dashboard" className="text-muted-foreground hover:text-primary">
-                ← Back to Dashboard
-              </Link>
-              <div className="flex items-center space-x-2">
-                <Calendar className="h-8 w-8 text-primary" />
-                <h1 className="text-2xl font-bold text-card-foreground">Attendance Management</h1>
-              </div>
-            </div>
-            <div className="flex items-center space-x-4">
-              <Button variant="outline">
-                <Download className="h-4 w-4 mr-2" />
-                Export Report
-              </Button>
-            </div>
+    <AdminLayout>
+      <div className="p-6">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">Attendance Management</h1>
+            <p className="text-muted-foreground">Monitor attendance, manage class incharges, and generate reports</p>
+          </div>
+          <div className="flex items-center space-x-4">
+            <Button variant="outline">
+              <Download className="h-4 w-4 mr-2" />
+              Export Report
+            </Button>
           </div>
         </div>
-      </header>
-
-      {/* Main Content */}
-      <main className="container mx-auto px-4 py-8">
         <Tabs defaultValue="overview" className="space-y-6">
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="overview">Overview</TabsTrigger>
@@ -420,39 +427,56 @@ export default function AttendanceManagement() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Classes with Incharge */}
+              {/* Teachers with Classes */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Classes with Incharge</CardTitle>
-                  <CardDescription>Currently assigned class incharges</CardDescription>
+                  <CardTitle>Teachers with Classes</CardTitle>
+                  <CardDescription>Teachers and their assigned classes</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    {classIncharges.map((incharge) => (
-                      <div key={incharge._id} className="flex items-center justify-between p-3 border rounded-lg">
-                        <div>
-                          <h4 className="font-medium">
-                            {incharge.className}-{incharge.section}
-                          </h4>
-                          <p className="text-sm text-muted-foreground">
-                            {incharge.teacher?.firstName} {incharge.teacher?.lastName}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {incharge.teacher?.designation}
-                          </p>
+                    {Object.entries(groupedIncharges).map(([teacherId, incharges]) => {
+                      const teacher = incharges[0].teacher;
+                      return (
+                        <div key={teacherId} className="border rounded-lg p-4">
+                          <div className="flex items-center justify-between mb-2">
+                            <div>
+                              <h4 className="font-medium">
+                                {teacher?.firstName} {teacher?.lastName}
+                              </h4>
+                              <p className="text-sm text-muted-foreground">
+                                {teacher?.designation} • {teacher?.department}
+                              </p>
+                            </div>
+                            <Badge variant="outline">{incharges.length} classes</Badge>
+                          </div>
+                          <div className="space-y-2">
+                            {incharges.map(incharge => (
+                              <div key={incharge._id} className="flex items-center justify-between p-2 bg-muted rounded">
+                                <div>
+                                  <span className="font-medium">
+                                    {incharge.className}-{incharge.section}
+                                  </span>
+                                  <span className="text-xs text-muted-foreground ml-2">
+                                    {incharge.class?.currentStudents || 0} students
+                                  </span>
+                                </div>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleRemoveIncharge(incharge._id)}
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            ))}
+                          </div>
                         </div>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleRemoveIncharge(incharge._id)}
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    ))}
-                    {classIncharges.length === 0 && (
+                      );
+                    })}
+                    {Object.keys(groupedIncharges).length === 0 && (
                       <p className="text-center text-muted-foreground py-4">
-                        No class incharges assigned yet
+                        No teachers assigned to classes yet
                       </p>
                     )}
                   </div>
@@ -500,6 +524,74 @@ export default function AttendanceManagement() {
                 </CardContent>
               </Card>
             </div>
+
+            {/* All Teachers Section */}
+            <Card>
+              <CardHeader>
+                <CardTitle>All Teachers</CardTitle>
+                <CardDescription>View all teachers and their assignments</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {teachers.map((teacher) => {
+                    const teacherClasses = groupedIncharges[teacher._id] || [];
+                    return (
+                      <div key={teacher._id} className="border rounded-lg p-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <div>
+                            <h4 className="font-medium">
+                              {teacher.firstName} {teacher.lastName}
+                            </h4>
+                            <p className="text-sm text-muted-foreground">
+                              {teacher.designation} • {teacher.department}
+                            </p>
+                          </div>
+                          <Badge variant={teacherClasses.length > 0 ? "default" : "secondary"}>
+                            {teacherClasses.length > 0 ? `${teacherClasses.length} classes` : "No classes"}
+                          </Badge>
+                        </div>
+                        
+                        {teacherClasses.length > 0 && (
+                          <div className="mt-3">
+                            <p className="text-sm font-medium mb-2">Assigned Classes:</p>
+                            <div className="space-y-1">
+                              {teacherClasses.map(incharge => (
+                                <div key={incharge._id} className="flex items-center justify-between text-sm p-1 bg-muted rounded">
+                                  <span>{incharge.className}-{incharge.section}</span>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => handleRemoveIncharge(incharge._id)}
+                                  >
+                                    <Trash2 className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        
+                        {teacherClasses.length === 0 && (
+                          <div className="mt-3 text-center">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                setSelectedTeacher(teacher._id);
+                                setIsAssignInchargeDialogOpen(true);
+                              }}
+                            >
+                              <Plus className="h-3 w-3 mr-1" />
+                              Assign Class
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
 
           {/* Attendance Records Tab */}
@@ -649,9 +741,8 @@ export default function AttendanceManagement() {
             </Card>
           </TabsContent>
         </Tabs>
-      </main>
 
-      {/* Assign Incharge Dialog */}
+        {/* Assign Incharge Dialog */}
       <Dialog open={isAssignInchargeDialogOpen} onOpenChange={setIsAssignInchargeDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -713,6 +804,7 @@ export default function AttendanceManagement() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+      </div>
+    </AdminLayout>
   )
 }

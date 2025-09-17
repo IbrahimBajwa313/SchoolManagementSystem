@@ -1,19 +1,9 @@
 import { type NextRequest, NextResponse } from "next/server"
 import clientPromise from "@/lib/mongodb"
-import { getCurrentUser, getAccessibleClasses } from "@/lib/auth"
 import { ObjectId } from "mongodb"
 
 export async function POST(request: NextRequest) {
   try {
-    // Check authentication
-    const user = getCurrentUser()
-    if (!user) {
-      return NextResponse.json(
-        { success: false, message: "Authentication required" },
-        { status: 401 }
-      )
-    }
-
     const client = await clientPromise
     const db = client.db("school_management")
 
@@ -24,23 +14,55 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, message: "Missing required fields" }, { status: 400 })
     }
 
-    // Check if user has access to this class
-    const accessibleClasses = await getAccessibleClasses(user._id)
-    if (!accessibleClasses.includes(classId)) {
+    // Verify that the teacher is assigned to this class
+    const classInfo = await db.collection("classes").findOne({ _id: new ObjectId(classId) })
+    if (!classInfo) {
+      return NextResponse.json({ success: false, message: "Class not found" }, { status: 404 })
+    }
+
+    // Check if the teacher is the class incharge
+    if (classInfo.classIncharge !== markedBy) {
       return NextResponse.json(
-        { success: false, message: "Access denied to this class" },
+        { success: false, message: "You are not authorized to mark attendance for this class" },
         { status: 403 }
       )
     }
 
     // Check if attendance already exists for this class on this date
-    const existingAttendance = await db.collection("attendance_records").findOne({
+    const existingAttendance = await db.collection("attendance_records").find({
       classId: classId,
       date: new Date(date)
-    })
+    }).toArray()
 
-    if (existingAttendance) {
-      return NextResponse.json({ success: false, message: "Attendance already marked for this class today" }, { status: 400 })
+    if (existingAttendance.length > 0) {
+      // If attendance exists, we'll update instead of creating new records
+      const bulkOperations = attendanceRecords.map(record => ({
+        updateOne: {
+          filter: {
+            studentId: record.studentId,
+            classId: classId,
+            date: new Date(date)
+          },
+          update: {
+            $set: {
+              status: record.status,
+              remarks: record.remarks || "",
+              markedBy: markedBy,
+              updatedAt: new Date()
+            }
+          },
+          upsert: true // Create if doesn't exist, update if exists
+        }
+      }))
+
+      const result = await db.collection("attendance_records").bulkWrite(bulkOperations)
+
+      return NextResponse.json({
+        success: true,
+        message: `Attendance updated for ${result.modifiedCount + result.upsertedCount} students`,
+        modifiedCount: result.modifiedCount,
+        upsertedCount: result.upsertedCount
+      })
     }
 
     // Prepare bulk attendance records
@@ -72,15 +94,6 @@ export async function POST(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
-    // Check authentication
-    const user = getCurrentUser()
-    if (!user) {
-      return NextResponse.json(
-        { success: false, message: "Authentication required" },
-        { status: 401 }
-      )
-    }
-
     const client = await clientPromise
     const db = client.db("school_management")
 
@@ -91,11 +104,16 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ success: false, message: "Missing required fields" }, { status: 400 })
     }
 
-    // Check if user has access to this class
-    const accessibleClasses = await getAccessibleClasses(user._id)
-    if (!accessibleClasses.includes(classId)) {
+    // Verify that the teacher is assigned to this class
+    const classInfo = await db.collection("classes").findOne({ _id: new ObjectId(classId) })
+    if (!classInfo) {
+      return NextResponse.json({ success: false, message: "Class not found" }, { status: 404 })
+    }
+
+    // Check if the teacher is the class incharge
+    if (classInfo.classIncharge !== markedBy) {
       return NextResponse.json(
-        { success: false, message: "Access denied to this class" },
+        { success: false, message: "You are not authorized to update attendance for this class" },
         { status: 403 }
       )
     }

@@ -17,6 +17,8 @@ import {
   AlertTriangle,
 } from "lucide-react"
 import Link from "next/link"
+import { AdminLayout } from "@/components/AdminLayout"
+import { PageLoader } from "@/components/LoadingSpinner"
 
 interface DashboardStats {
   students: {
@@ -71,39 +73,8 @@ export default function AdminDashboard() {
     }
   }
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b bg-card">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2">
-                <GraduationCap className="h-8 w-8 text-primary" />
-                <h1 className="text-2xl font-bold text-card-foreground">Admin Dashboard</h1>
-              </div>
-            </div>
-            <div className="flex items-center space-x-4">
-              <Button variant="outline" size="sm">
-                <Bell className="h-4 w-4 mr-2" />
-                Notifications
-                <Badge variant="secondary" className="ml-2">
-                  5
-                </Badge>
-              </Button>
-              <Button variant="outline" size="sm">
-                <Settings className="h-4 w-4 mr-2" />
-                Settings
-              </Button>
-              <Button variant="destructive" size="sm">
-                Logout
-              </Button>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <main className="container mx-auto px-4 py-8">
+    <AdminLayout>
+      <div className="p-6">
         {/* Welcome Section */}
         <div className="mb-8">
           <h2 className="text-3xl font-bold text-foreground mb-2">Welcome back, Administrator</h2>
@@ -286,6 +257,66 @@ export default function AdminDashboard() {
           </Card>
         </div>
 
+        {/* Attendance Overview */}
+        <Card className="mt-6">
+          <CardHeader>
+            <CardTitle className="text-card-foreground">Today's Attendance Overview</CardTitle>
+            <CardDescription>Real-time attendance status across all classes</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+              <div className="text-center p-4 border rounded-lg">
+                <div className="text-2xl font-bold text-green-600 mb-2">
+                  {loading ? "..." : stats?.attendance.presentToday || "0"}
+                </div>
+                <p className="text-sm text-muted-foreground">Students Present</p>
+                <Badge variant="secondary" className="mt-2">
+                  {loading ? "..." : stats?.attendance.todayRate || "0"}% Attendance
+                </Badge>
+              </div>
+
+              <div className="text-center p-4 border rounded-lg">
+                <div className="text-2xl font-bold text-orange-600 mb-2">
+                  {loading ? "..." : (stats?.attendance.totalToday || 0) - (stats?.attendance.presentToday || 0)}
+                </div>
+                <p className="text-sm text-muted-foreground">Students Absent</p>
+                <Badge variant="outline" className="mt-2">
+                  {loading ? "..." : (100 - (stats?.attendance.todayRate || 0)).toFixed(1)}% Absent
+                </Badge>
+              </div>
+
+              <div className="text-center p-4 border rounded-lg">
+                <div className="text-2xl font-bold text-blue-600 mb-2">
+                  {loading ? "..." : stats?.attendance.totalToday || "0"}
+                </div>
+                <p className="text-sm text-muted-foreground">Total Students</p>
+                <Badge variant="outline" className="mt-2">
+                  All Classes
+                </Badge>
+              </div>
+
+              <div className="text-center p-4 border rounded-lg">
+                <div className="text-2xl font-bold text-purple-600 mb-2">
+                  {loading ? "..." : stats?.students.total || "0"}
+                </div>
+                <p className="text-sm text-muted-foreground">Active Classes</p>
+                <Badge variant="outline" className="mt-2">
+                  Today
+                </Badge>
+              </div>
+            </div>
+
+            <div className="mt-6 flex justify-center">
+              <Link href="/admin/attendance">
+                <Button>
+                  <Calendar className="h-4 w-4 mr-2" />
+                  View Attendance Details
+                </Button>
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Fee Management Quick View */}
         <Card className="mt-6">
           <CardHeader>
@@ -335,7 +366,7 @@ export default function AdminDashboard() {
             </div>
           </CardContent>
         </Card>
-      </main>
-    </div>
+      </div>
+    </AdminLayout>
   )
 }

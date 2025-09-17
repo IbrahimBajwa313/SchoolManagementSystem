@@ -88,7 +88,7 @@ export function About() {
                 alt="School community"
                 width={800}
                 height={1000}
-                className="md:h-[600px] w-full object-cover rounded-2xl group-hover:scale-105 transition-transform duration-500"
+                className="md:h-[600px] h-[400px] w-full object-cover rounded-2xl group-hover:scale-105 transition-transform duration-500"
               />
 
               <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent group-hover:from-black/10 transition-all duration-500"></div>

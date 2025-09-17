@@ -572,12 +572,30 @@ export default function TeacherAttendance() {
   const [existingAttendance, setExistingAttendance] = useState<AttendanceRecord[]>([])
   const [isEditing, setIsEditing] = useState(false)
 
-  // Mock teacher ID - in real app, get from auth context
-  const teacherId = "teacher123"
+  // Get teacher data from localStorage (set during login)
+  const [teacherId, setTeacherId] = useState<string | null>(null)
 
   useEffect(() => {
-    fetchMyClasses()
+    // Get teacher data from localStorage
+    const storedTeacherData = localStorage.getItem("teacherData")
+    if (storedTeacherData) {
+      try {
+        const parsedData = JSON.parse(storedTeacherData)
+        setTeacherId(parsedData._id)
+      } catch (error) {
+        console.error("Error parsing teacher data:", error)
+        window.location.href = "/staff/login"
+      }
+    } else {
+      window.location.href = "/staff/login"
+    }
   }, [])
+
+  useEffect(() => {
+    if (teacherId) {
+      fetchMyClasses()
+    }
+  }, [teacherId])
 
   useEffect(() => {
     if (selectedClass) {
@@ -587,18 +605,16 @@ export default function TeacherAttendance() {
   }, [selectedClass, selectedDate])
 
   const fetchMyClasses = async () => {
+    if (!teacherId) return
+    
     try {
-      // Fetch all classes and filter by classIncharge field
-      const response = await fetch("/api/classes?includeStudents=true")
+      // Use the dedicated staff/classes endpoint
+      const response = await fetch(`/api/staff/classes?teacherId=${teacherId}`)
       const data = await response.json()
       if (data.success) {
-        // Filter classes where this teacher is the incharge
-        const myClassesData = data.data.filter((cls: Class) => 
-          cls.classIncharge === teacherId
-        )
-        setMyClasses(myClassesData)
-        if (myClassesData.length > 0) {
-          setSelectedClass(myClassesData[0])
+        setMyClasses(data.data)
+        if (data.data.length > 0) {
+          setSelectedClass(data.data[0])
         }
       }
     } catch (error) {
@@ -612,17 +628,29 @@ export default function TeacherAttendance() {
     if (!selectedClass) return
 
     try {
-      const response = await fetch(`/api/students?class=${selectedClass.className}&section=${selectedClass.section}`)
-      const data = await response.json()
-      if (data.success) {
-        setStudents(data.data)
+      // Use the students from the class data if available, otherwise fetch separately
+      if (selectedClass.students && selectedClass.students.length > 0) {
+        setStudents(selectedClass.students)
         // Initialize attendance data
-        const initialAttendance = data.data.map((student: Student) => ({
+        const initialAttendance = selectedClass.students.map((student: Student) => ({
           studentId: student._id,
           status: "Present" as const,
           remarks: ""
         }))
         setAttendanceData(initialAttendance)
+      } else {
+        const response = await fetch(`/api/students?class=${selectedClass.className}&section=${selectedClass.section}`)
+        const data = await response.json()
+        if (data.success) {
+          setStudents(data.data)
+          // Initialize attendance data
+          const initialAttendance = data.data.map((student: Student) => ({
+            studentId: student._id,
+            status: "Present" as const,
+            remarks: ""
+          }))
+          setAttendanceData(initialAttendance)
+        }
       }
     } catch (error) {
       console.error("Error fetching students:", error)
@@ -640,7 +668,7 @@ export default function TeacherAttendance() {
         setIsEditing(data.data.length > 0)
         
         // Update attendance data with existing records
-        if (data.data.length > 0) {
+        if (data.data.length > 0 && attendanceData.length > 0) {
           const updatedAttendance = attendanceData.map(item => {
             const existing = data.data.find((record: AttendanceRecord) => 
               record.studentId === item.studentId
@@ -676,15 +704,13 @@ export default function TeacherAttendance() {
   }
 
   const handleSaveAttendance = async () => {
-    if (!selectedClass) return
+    if (!selectedClass || !teacherId) return
 
     setSaving(true)
     try {
-      const endpoint = isEditing ? "/api/attendance/bulk" : "/api/attendance/bulk"
-      const method = isEditing ? "PUT" : "POST"
-
-      const response = await fetch(endpoint, {
-        method,
+      // Always use POST method with upsert logic in the API
+      const response = await fetch("/api/attendance/bulk", {
+        method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           attendanceRecords: attendanceData,
@@ -964,20 +990,24 @@ export default function TeacherAttendance() {
 
           {/* View Records Tab */}
           <TabsContent value="view-records" className="space-y-6">
-            <AttendanceHistory 
-              selectedClass={selectedClass}
-              myClasses={myClasses}
-              teacherId={teacherId}
-            />
+            {teacherId && (
+              <AttendanceHistory 
+                selectedClass={selectedClass}
+                myClasses={myClasses}
+                teacherId={teacherId}
+              />
+            )}
           </TabsContent>
 
           {/* Reports Tab */}
           <TabsContent value="reports" className="space-y-6">
-            <AttendanceReports 
-              selectedClass={selectedClass}
-              myClasses={myClasses}
-              teacherId={teacherId}
-            />
+            {teacherId && (
+              <AttendanceReports 
+                selectedClass={selectedClass}
+                myClasses={myClasses}
+                teacherId={teacherId}
+              />
+            )}
           </TabsContent>
         </Tabs>
       </main>

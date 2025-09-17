@@ -12,6 +12,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
 import { Plus, Edit, Trash2, Users, BookOpen, GraduationCap, Search, UserCheck } from "lucide-react"
 import Link from "next/link"
+import { AdminLayout } from "@/components/AdminLayout"
+import { PageLoader } from "@/components/LoadingSpinner"
 
 interface Class {
   _id: string
@@ -200,38 +202,25 @@ export default function ClassManagement() {
   const academicYears = [...new Set(classes.map(c => c.academicYear))].sort()
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
-          <p className="mt-4 text-muted-foreground">Loading classes...</p>
-        </div>
-      </div>
-    )
+    return <PageLoader text="Loading classes..." />
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b bg-card">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <Link href="/admin/dashboard" className="text-muted-foreground hover:text-primary">
-                ← Back to Dashboard
-              </Link>
-              <div className="flex items-center space-x-2">
-                <GraduationCap className="h-8 w-8 text-primary" />
-                <h1 className="text-2xl font-bold text-card-foreground">Class Management</h1>
-              </div>
-            </div>
-            <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-              <DialogTrigger asChild>
-                <Button onClick={resetForm}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add New Class
-                </Button>
-              </DialogTrigger>
+    <AdminLayout>
+      <div className="p-6">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">Class Management</h1>
+            <p className="text-muted-foreground">Manage classes, sections, and assignments</p>
+          </div>
+          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+            <DialogTrigger asChild>
+              <Button onClick={resetForm}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add New Class
+              </Button>
+            </DialogTrigger>
               <DialogContent className="sm:max-w-md">
                 <DialogHeader>
                   <DialogTitle>Add New Class</DialogTitle>
@@ -320,11 +309,8 @@ export default function ClassManagement() {
               </DialogContent>
             </Dialog>
           </div>
-        </div>
-      </header>
 
-      {/* Main Content */}
-      <main className="container mx-auto px-4 py-8">
+        {/* Main Content */}
         <Tabs defaultValue="overview" className="space-y-6">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="overview">Class Overview</TabsTrigger>
@@ -558,9 +544,8 @@ export default function ClassManagement() {
             </Card>
           </TabsContent>
         </Tabs>
-      </main>
 
-      {/* Edit Dialog */}
+        {/* Edit Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -644,6 +629,7 @@ export default function ClassManagement() {
           </form>
         </DialogContent>
       </Dialog>
-    </div>
+      </div>
+    </AdminLayout>
   )
 }

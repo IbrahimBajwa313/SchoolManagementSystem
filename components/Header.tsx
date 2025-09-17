@@ -2,6 +2,7 @@
 
 import { Button } from "@/components/ui/button"
 import { GraduationCap, Sparkles, Menu, X } from "lucide-react"
+import Image from "next/image"
 import Link from "next/link"
 import { useState } from "react"
 
@@ -12,22 +13,23 @@ export function Header() {
     <header className="border-b bg-white/95 backdrop-blur-md sticky top-0 z-50 shadow-lg transition-all duration-300">
       <div className="container mx-auto px-4 sm:px-6 lg:px-16 py-3">
         <div className="flex items-center justify-between">
-          {/* Logo + Name */}
-          <div className="flex items-center space-x-2 sm:space-x-3 min-w-0">
-            <div className="bg-gradient-to-br from-primary to-primary/80 rounded-full p-2 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
-              <GraduationCap className="h-6 w-6 sm:h-7 sm:w-7 text-primary-foreground" />
-            </div>
-            <div className="min-w-0">
-              <h1 className="text-base sm:text-lg lg:text-xl font-bold text-foreground bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent truncate">
+          <div className="flex items-center space-x-3">
+            {/* <Image
+              src="/logo.png"
+              alt="School Logo"
+              width={40}
+              height={40}
+              className="h-10 w-10 object-contain scale-200"
+            /> */}
+            <div>
+              <h1 className="text-lg sm:text-xl font-bold text-foreground">
                 Greenwood International
               </h1>
-              <p className="text-[11px] sm:text-xs text-muted-foreground flex items-center gap-1 truncate">
-                <Sparkles className="h-3 w-3 flex-shrink-0" />
+              <p className="text-xs text-muted-foreground hidden sm:block">
                 Excellence in Education
               </p>
             </div>
           </div>
-
           {/* Desktop Navigation */}
           <nav className="hidden lg:flex items-center space-x-8">
             {["About", "Academics", "Facilities", "Admissions", "Contact"].map(

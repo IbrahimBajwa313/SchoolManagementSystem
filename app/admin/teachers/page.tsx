@@ -10,6 +10,7 @@ import { BookOpen, Search, Filter, Download, Plus, Eye, Edit, Trash2, UserCheck,
 import Link from "next/link"
 import AddTeacher from "./AddTeacher"
 import EditTeacher from "./EditTeacher"
+import { AdminLayout } from "@/components/AdminLayout"
 
 interface Teacher {
   _id: string
@@ -217,6 +218,7 @@ export default function TeacherManagement() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
+      <AdminLayout>
       <header className="border-b bg-card">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
@@ -473,6 +475,7 @@ export default function TeacherManagement() {
           </Card>
         </div>
       </main>
+</AdminLayout>
 
       {/* Add Teacher Dialog */}
       <AddTeacher
@@ -499,5 +502,6 @@ export default function TeacherManagement() {
         teacher={editingTeacher}
       />
     </div>
+    
   )
 }
