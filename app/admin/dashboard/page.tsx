@@ -208,6 +208,12 @@ export default function AdminDashboard() {
                     <span className="text-sm">Teacher Management</span>
                   </Button>
                 </Link>
+                <Link href="/admin/classes">
+                  <Button className="h-20 flex-col space-y-2 bg-transparent w-full" variant="outline">
+                    <GraduationCap className="h-6 w-6" />
+                    <span className="text-sm">Class Management</span>
+                  </Button>
+                </Link>
                 <Link href="/admin/reports">
                   <Button className="h-20 flex-col space-y-2 bg-transparent w-full" variant="outline">
                     <BarChart3 className="h-6 w-6" />

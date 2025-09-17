@@ -12,8 +12,9 @@ import { Contact } from "@/components/sections/Contact"
 
 export default function SchoolHomepage() {
   return (
-    <div className="min-h-screen bg-background">
-      <Header />
+    <>
+    <Header />
+    <div className="min-h-screen bg-background md:px-8">
       <Hero />
       <About />
       <Academics />
@@ -23,5 +24,6 @@ export default function SchoolHomepage() {
       <Contact />
       <Footer />
     </div>
+    </>
   )
 }

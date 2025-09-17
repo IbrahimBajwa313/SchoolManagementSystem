@@ -21,7 +21,7 @@ export function Facilities() {
           <div className="group text-center space-y-4">
             <div className="relative overflow-hidden rounded-xl shadow-lg">
               <Image
-                src="/modern-science-laboratory-with-equipment.jpg"
+                src="/sciencelab.png"
                 alt="Science Labs"
                 width={300}
                 height={200}
@@ -36,7 +36,7 @@ export function Facilities() {
           <div className="group text-center space-y-4">
             <div className="relative overflow-hidden rounded-xl shadow-lg">
               <Image
-                src="/modern-library-with-students-reading.jpg"
+                src="/library.png"
                 alt="Digital Library"
                 width={300}
                 height={200}
@@ -44,14 +44,14 @@ export function Facilities() {
               />
               <div className="absolute inset-0 bg-primary/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
             </div>
-            <h3 className="text-xl font-semibold text-foreground">Digital Library</h3>
+            <h3 className="text-xl font-semibold text-foreground"> Library</h3>
             <p className="text-muted-foreground text-sm">Extensive collection with digital resources</p>
           </div>
 
           <div className="group text-center space-y-4">
             <div className="relative overflow-hidden rounded-xl shadow-lg">
               <Image
-                src="/school-sports-complex-with-swimming-pool.jpg"
+                src="/sports.png"
                 alt="Sports Complex"
                 width={300}
                 height={200}
@@ -66,7 +66,7 @@ export function Facilities() {
           <div className="group text-center space-y-4">
             <div className="relative overflow-hidden rounded-xl shadow-lg">
               <Image
-                src="/modern-computer-lab-students.png"
+                src="/comp.png"
                 alt="Tech Center"
                 width={300}
                 height={200}

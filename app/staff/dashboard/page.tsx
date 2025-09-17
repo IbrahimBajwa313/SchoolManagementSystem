@@ -4,7 +4,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Users, Calendar, CheckSquare, LogOut } from "lucide-react"
+import { Users, Calendar, CheckSquare, LogOut, ClipboardCheck } from "lucide-react"
+import Link from "next/link"
 
 export default function StaffDashboardPage() {
   const teacherInfo = {
@@ -173,20 +174,50 @@ export default function StaffDashboardPage() {
           <TabsContent value="attendance" className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle>Mark Attendance</CardTitle>
-                <CardDescription>Mark attendance for your classes</CardDescription>
+                <CardTitle>Attendance Management</CardTitle>
+                <CardDescription>Mark and manage attendance for your classes</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {teacherInfo.classes.map((className, index) => (
-                    <div key={index} className="flex items-center justify-between p-4 border rounded-lg">
-                      <div>
-                        <h4 className="font-medium">{className}</h4>
-                        <p className="text-sm text-gray-600">30 students</p>
+                <div className="space-y-6">
+                  {/* Quick Access to Attendance System */}
+                  <div className="bg-green-50 p-6 rounded-lg border border-green-200">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-4">
+                        <div className="bg-green-100 p-3 rounded-full">
+                          <ClipboardCheck className="h-6 w-6 text-green-600" />
+                        </div>
+                        <div>
+                          <h3 className="text-lg font-semibold text-green-900">Attendance System</h3>
+                          <p className="text-green-700">Mark daily attendance for all your assigned classes</p>
+                        </div>
                       </div>
-                      <Button>Mark Attendance</Button>
+                      <Link href="/staff/attendance">
+                        <Button className="bg-green-600 hover:bg-green-700">
+                          <ClipboardCheck className="h-4 w-4 mr-2" />
+                          Open Attendance System
+                        </Button>
+                      </Link>
                     </div>
-                  ))}
+                  </div>
+
+                  {/* Class Overview */}
+                  <div className="space-y-4">
+                    <h4 className="font-medium text-gray-900">Your Classes</h4>
+                    {teacherInfo.classes.map((className, index) => (
+                      <div key={index} className="flex items-center justify-between p-4 border rounded-lg">
+                        <div>
+                          <h4 className="font-medium">{className}</h4>
+                          <p className="text-sm text-gray-600">30 students • Mathematics</p>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Badge variant="outline">Class Incharge</Badge>
+                          <Link href="/staff/attendance">
+                            <Button size="sm">Mark Attendance</Button>
+                          </Link>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </CardContent>
             </Card>

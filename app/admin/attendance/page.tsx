@@ -8,53 +8,126 @@ import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Calendar, Search, Filter, Download, Plus, Eye, CheckCircle, XCircle, Clock, Users, Edit } from "lucide-react"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Calendar, Search, Filter, Download, Plus, Eye, CheckCircle, XCircle, Clock, Users, Edit, UserCheck, Settings, BarChart3, BookOpen, Trash2 } from "lucide-react"
 import Link from "next/link"
 
 interface AttendanceRecord {
   _id: string
   studentId: string
-  studentName: string
-  class: string
+  classId: string
   date: string
   status: "Present" | "Absent" | "Late"
-  timeIn?: string
-  timeOut?: string
+  markedBy: string
+  markedAt: string
+  remarks?: string
+  student?: {
+    firstName: string
+    lastName: string
+    rollNumber: string
+  }
+  class?: {
+    className: string
+    section: string
+  }
+  teacher?: {
+    firstName: string
+    lastName: string
+  }
+}
+
+interface ClassIncharge {
+  _id: string
+  teacherId: string
+  classId: string
+  className: string
+  section: string
+  assignedDate: string
+  isActive: boolean
+  teacher?: {
+    firstName: string
+    lastName: string
+    email: string
+    designation: string
+  }
+  class?: {
+    className: string
+    section: string
+    maxStudents: number
+    currentStudents: number
+  }
+}
+
+interface Class {
+  _id: string
+  className: string
+  section: string
+  classIncharge?: string
+  maxStudents: number
+  currentStudents: number
+  students?: any[]
+  inchargeDetails?: {
+    firstName: string
+    lastName: string
+    email: string
+    designation: string
+  }
+}
+
+interface Teacher {
+  _id: string
+  firstName: string
+  lastName: string
+  email: string
+  designation: string
 }
 
 export default function AttendanceManagement() {
   const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>([])
+  const [classIncharges, setClassIncharges] = useState<ClassIncharge[]>([])
+  const [classes, setClasses] = useState<Class[]>([])
+  const [teachers, setTeachers] = useState<Teacher[]>([])
   const [searchTerm, setSearchTerm] = useState("")
   const [classFilter, setClassFilter] = useState("All")
   const [statusFilter, setStatusFilter] = useState("All")
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0])
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
-  const [selectedRecord, setSelectedRecord] = useState<AttendanceRecord | null>(null)
-  const [formData, setFormData] = useState({
-    studentId: "",
-    studentName: "",
-    class: "",
-    date: "",
-    status: "Present" as "Present" | "Absent" | "Late",
-    timeIn: "",
-    timeOut: ""
-  })
+  const [isAssignInchargeDialogOpen, setIsAssignInchargeDialogOpen] = useState(false)
+  const [selectedClass, setSelectedClass] = useState<Class | null>(null)
+  const [selectedTeacher, setSelectedTeacher] = useState("")
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    fetchData()
+  }, [])
 
   useEffect(() => {
     fetchAttendanceRecords()
   }, [selectedDate, classFilter, statusFilter])
 
+  const fetchData = async () => {
+    try {
+      await Promise.all([
+        fetchClassIncharges(),
+        fetchClasses(),
+        fetchTeachers(),
+        fetchAttendanceRecords()
+      ])
+    } catch (error) {
+      console.error("Error fetching data:", error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const fetchAttendanceRecords = async () => {
     try {
       const params = new URLSearchParams()
       if (selectedDate) params.append("date", selectedDate)
-      if (classFilter !== "All") params.append("class", classFilter)
+      if (classFilter !== "All") params.append("classId", classFilter)
       if (statusFilter !== "All") params.append("status", statusFilter)
 
       const response = await fetch(`/api/attendance?${params}`)
       const data = await response.json()
-      
       if (data.success) {
         setAttendanceRecords(data.data)
       }
@@ -63,102 +136,82 @@ export default function AttendanceManagement() {
     }
   }
 
-  const handleAddRecord = async () => {
+  const fetchClassIncharges = async () => {
     try {
-      const response = await fetch("/api/attendance", {
+      const response = await fetch("/api/class-incharge?isActive=true")
+      const data = await response.json()
+      if (data.success) {
+        setClassIncharges(data.data)
+      }
+    } catch (error) {
+      console.error("Error fetching class incharges:", error)
+    }
+  }
+
+  const fetchClasses = async () => {
+    try {
+      const response = await fetch("/api/classes?includeIncharge=true")
+      const data = await response.json()
+      if (data.success) {
+        setClasses(data.data)
+      }
+    } catch (error) {
+      console.error("Error fetching classes:", error)
+    }
+  }
+
+  const fetchTeachers = async () => {
+    try {
+      const response = await fetch("/api/teachers")
+      const data = await response.json()
+      if (data.success) {
+        setTeachers(data.data)
+      }
+    } catch (error) {
+      console.error("Error fetching teachers:", error)
+    }
+  }
+
+  const handleAssignIncharge = async () => {
+    if (!selectedClass || !selectedTeacher) return
+
+    try {
+      const response = await fetch("/api/class-incharge", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(formData),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          teacherId: selectedTeacher,
+          classId: selectedClass._id
+        })
       })
 
       const data = await response.json()
-      
       if (data.success) {
-        setIsAddDialogOpen(false)
-        resetForm()
-        fetchAttendanceRecords()
+        setIsAssignInchargeDialogOpen(false)
+        setSelectedClass(null)
+        setSelectedTeacher("")
+        fetchClassIncharges()
+        fetchClasses()
       }
     } catch (error) {
-      console.error("Error adding attendance record:", error)
+      console.error("Error assigning class incharge:", error)
     }
   }
 
-  const handleEditRecord = (record: AttendanceRecord) => {
-    setSelectedRecord(record)
-    setFormData({
-      studentId: record.studentId,
-      studentName: record.studentName,
-      class: record.class,
-      date: record.date,
-      status: record.status,
-      timeIn: record.timeIn || "",
-      timeOut: record.timeOut || ""
-    })
-    setIsEditDialogOpen(true)
-  }
-
-  const handleUpdateRecord = async () => {
-    if (!selectedRecord) return
-
+  const handleRemoveIncharge = async (inchargeId: string) => {
     try {
-      const response = await fetch(`/api/attendance/${selectedRecord._id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(formData),
+      const response = await fetch(`/api/class-incharge?id=${inchargeId}`, {
+        method: "DELETE"
       })
 
       const data = await response.json()
-      
       if (data.success) {
-        setIsEditDialogOpen(false)
-        setSelectedRecord(null)
-        resetForm()
-        fetchAttendanceRecords()
+        fetchClassIncharges()
+        fetchClasses()
       }
     } catch (error) {
-      console.error("Error updating attendance record:", error)
+      console.error("Error removing class incharge:", error)
     }
-  }
-
-  const handleDeleteRecord = async (recordId: string) => {
-    if (!confirm("Are you sure you want to delete this attendance record?")) return
-
-    try {
-      const response = await fetch(`/api/attendance/${recordId}`, {
-        method: "DELETE",
-      })
-
-      const data = await response.json()
-      
-      if (data.success) {
-        fetchAttendanceRecords()
-      }
-    } catch (error) {
-      console.error("Error deleting attendance record:", error)
-    }
-  }
-
-  const resetForm = () => {
-    setFormData({
-      studentId: "",
-      studentName: "",
-      class: "",
-      date: selectedDate,
-      status: "Present",
-      timeIn: "",
-      timeOut: ""
-    })
-  }
-
-  const updateFormField = (field: string, value: any) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }))
   }
 
   const getStatusBadge = (status: string) => {
@@ -170,18 +223,18 @@ export default function AttendanceManagement() {
             Present
           </Badge>
         )
-      case "Absent":
-        return (
-          <Badge variant="destructive">
-            <XCircle className="h-3 w-3 mr-1" />
-            Absent
-          </Badge>
-        )
       case "Late":
         return (
-          <Badge variant="secondary">
+          <Badge className="bg-yellow-100 text-yellow-800">
             <Clock className="h-3 w-3 mr-1" />
             Late
+          </Badge>
+        )
+      case "Absent":
+        return (
+          <Badge className="bg-red-100 text-red-800">
+            <XCircle className="h-3 w-3 mr-1" />
+            Absent
           </Badge>
         )
       default:
@@ -190,91 +243,27 @@ export default function AttendanceManagement() {
   }
 
   const filteredAttendance = attendanceRecords.filter((record) => {
-    const matchesSearch =
-      record.studentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      record.studentId.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesClass = classFilter === "All" || record.class.includes(classFilter)
-    const matchesStatus = statusFilter === "All" || record.status === statusFilter
-    return matchesSearch && matchesClass && matchesStatus
+    const studentName = record.student ? `${record.student.firstName} ${record.student.lastName}` : ""
+    const className = record.class ? `${record.class.className}-${record.class.section}` : ""
+    
+    const matchesSearch = 
+      studentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (record.student?.rollNumber || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+      className.toLowerCase().includes(searchTerm.toLowerCase())
+    
+    return matchesSearch
   })
 
-  const presentCount = attendanceRecords.filter((r) => r.status === "Present").length
-  const absentCount = attendanceRecords.filter((r) => r.status === "Absent").length
-  const lateCount = attendanceRecords.filter((r) => r.status === "Late").length
-  const totalStudents = attendanceRecords.length
-  const attendancePercentage = totalStudents > 0 ? (((presentCount + lateCount) / totalStudents) * 100).toFixed(1) : "0"
-
-  const AttendanceForm = ({ isEdit = false }: { isEdit?: boolean }) => (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <div className="space-y-2">
-        <Label htmlFor="studentId">Student ID *</Label>
-        <Input
-          id="studentId"
-          value={formData.studentId}
-          onChange={(e) => updateFormField('studentId', e.target.value)}
-          placeholder="Enter student ID"
-        />
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
+          <p className="mt-4 text-muted-foreground">Loading attendance management...</p>
+        </div>
       </div>
-      <div className="space-y-2">
-        <Label htmlFor="studentName">Student Name *</Label>
-        <Input
-          id="studentName"
-          value={formData.studentName}
-          onChange={(e) => updateFormField('studentName', e.target.value)}
-          placeholder="Enter student name"
-        />
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="class">Class *</Label>
-        <Input
-          id="class"
-          value={formData.class}
-          onChange={(e) => updateFormField('class', e.target.value)}
-          placeholder="e.g., 10-A"
-        />
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="date">Date *</Label>
-        <Input
-          id="date"
-          type="date"
-          value={formData.date}
-          onChange={(e) => updateFormField('date', e.target.value)}
-        />
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="status">Status *</Label>
-        <Select value={formData.status} onValueChange={(value) => updateFormField('status', value)}>
-          <SelectTrigger>
-            <SelectValue placeholder="Select status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="Present">Present</SelectItem>
-            <SelectItem value="Absent">Absent</SelectItem>
-            <SelectItem value="Late">Late</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="timeIn">Time In</Label>
-        <Input
-          id="timeIn"
-          type="time"
-          value={formData.timeIn}
-          onChange={(e) => updateFormField('timeIn', e.target.value)}
-        />
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="timeOut">Time Out</Label>
-        <Input
-          id="timeOut"
-          type="time"
-          value={formData.timeOut}
-          onChange={(e) => updateFormField('timeOut', e.target.value)}
-        />
-      </div>
-    </div>
-  )
+    )
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -292,10 +281,6 @@ export default function AttendanceManagement() {
               </div>
             </div>
             <div className="flex items-center space-x-4">
-              <Button onClick={() => setIsAddDialogOpen(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Mark Attendance
-              </Button>
               <Button variant="outline">
                 <Download className="h-4 w-4 mr-2" />
                 Export Report
@@ -307,265 +292,427 @@ export default function AttendanceManagement() {
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
-        {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Total Students</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-primary">{totalStudents}</div>
-              <p className="text-xs text-muted-foreground">Today</p>
-            </CardContent>
-          </Card>
+        <Tabs defaultValue="overview" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="class-incharge">Class Incharge</TabsTrigger>
+            <TabsTrigger value="attendance">Attendance Records</TabsTrigger>
+            <TabsTrigger value="reports">Reports</TabsTrigger>
+          </TabsList>
 
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Present</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600">{presentCount}</div>
-              <p className="text-xs text-muted-foreground">On time</p>
-            </CardContent>
-          </Card>
+          {/* Overview Tab */}
+          <TabsContent value="overview" className="space-y-6">
+            {/* Summary Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium">Total Classes</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-primary">{classes.length}</div>
+                  <p className="text-xs text-muted-foreground">Active classes</p>
+                </CardContent>
+              </Card>
 
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Absent</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-red-600">{absentCount}</div>
-              <p className="text-xs text-muted-foreground">Not present</p>
-            </CardContent>
-          </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium">Assigned Incharges</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-green-600">{classIncharges.length}</div>
+                  <p className="text-xs text-muted-foreground">Classes with incharge</p>
+                </CardContent>
+              </Card>
 
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Late</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-orange-600">{lateCount}</div>
-              <p className="text-xs text-muted-foreground">Arrived late</p>
-            </CardContent>
-          </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium">Today's Attendance</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-blue-600">
+                    {attendanceRecords.filter(r => r.date === selectedDate).length}
+                  </div>
+                  <p className="text-xs text-muted-foreground">Records marked</p>
+                </CardContent>
+              </Card>
 
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Attendance Rate</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-primary">{attendancePercentage}%</div>
-              <p className="text-xs text-muted-foreground">Overall</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Date Selection and Filters */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle>Daily Attendance Records</CardTitle>
-            <CardDescription>Track and manage student attendance for selected date</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-col md:flex-row gap-4 mb-6">
-              <div className="flex items-center space-x-2">
-                <label className="text-sm font-medium">Date:</label>
-                <input
-                  type="date"
-                  className="px-3 py-2 border rounded-md"
-                  value={selectedDate}
-                  onChange={(e) => setSelectedDate(e.target.value)}
-                />
-              </div>
-              <div className="flex-1">
-                <div className="relative">
-                  <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search by student name or ID..."
-                    className="pl-10"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                  />
-                </div>
-              </div>
-              <div className="flex gap-2">
-                <select
-                  className="px-3 py-2 border rounded-md"
-                  value={classFilter}
-                  onChange={(e) => setClassFilter(e.target.value)}
-                >
-                  <option value="All">All Classes</option>
-                  <option value="1">Class 1</option>
-                  <option value="2">Class 2</option>
-                  <option value="8">Class 8</option>
-                  <option value="9">Class 9</option>
-                  <option value="10">Class 10</option>
-                  <option value="12">Class 12</option>
-                </select>
-                <select
-                  className="px-3 py-2 border rounded-md"
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                >
-                  <option value="All">All Status</option>
-                  <option value="Present">Present</option>
-                  <option value="Absent">Absent</option>
-                  <option value="Late">Late</option>
-                </select>
-                <Button variant="outline">
-                  <Filter className="h-4 w-4 mr-2" />
-                  More Filters
-                </Button>
-              </div>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium">Present Today</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-emerald-600">
+                    {attendanceRecords.filter(r => r.date === selectedDate && r.status === "Present").length}
+                  </div>
+                  <p className="text-xs text-muted-foreground">Students present</p>
+                </CardContent>
+              </Card>
             </div>
 
-            {/* Attendance Table */}
-            <div className="overflow-x-auto">
-              <table className="w-full border-collapse">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left p-4 font-medium">Student</th>
-                    <th className="text-left p-4 font-medium">Class</th>
-                    <th className="text-left p-4 font-medium">Status</th>
-                    <th className="text-left p-4 font-medium">Time In</th>
-                    <th className="text-left p-4 font-medium">Time Out</th>
-                    <th className="text-left p-4 font-medium">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredAttendance.map((record) => (
-                    <tr key={record._id} className="border-b hover:bg-muted/50">
-                      <td className="p-4">
+            {/* Quick Actions */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Class Management</CardTitle>
+                  <CardDescription>Assign and manage class incharges</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Button 
+                    className="w-full mb-2"
+                    onClick={() => setIsAssignInchargeDialogOpen(true)}
+                  >
+                    <UserCheck className="h-4 w-4 mr-2" />
+                    Assign Incharge
+                  </Button>
+                  <Button className="w-full" variant="outline">
+                    <Settings className="h-4 w-4 mr-2" />
+                    Manage Classes
+                  </Button>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Attendance Tracking</CardTitle>
+                  <CardDescription>View and manage attendance records</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Link href="/staff/attendance">
+                    <Button className="w-full mb-2">
+                      <Calendar className="h-4 w-4 mr-2" />
+                      Mark Attendance
+                    </Button>
+                  </Link>
+                  <Button className="w-full" variant="outline">
+                    <Eye className="h-4 w-4 mr-2" />
+                    View Records
+                  </Button>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Reports & Analytics</CardTitle>
+                  <CardDescription>Generate attendance reports</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Button className="w-full mb-2">
+                    <BarChart3 className="h-4 w-4 mr-2" />
+                    Generate Report
+                  </Button>
+                  <Button className="w-full" variant="outline">
+                    <Download className="h-4 w-4 mr-2" />
+                    Export Data
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          {/* Class Incharge Tab */}
+          <TabsContent value="class-incharge" className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-semibold">Class Incharge Management</h2>
+              <Button onClick={() => setIsAssignInchargeDialogOpen(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Assign Incharge
+              </Button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Classes with Incharge */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Classes with Incharge</CardTitle>
+                  <CardDescription>Currently assigned class incharges</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {classIncharges.map((incharge) => (
+                      <div key={incharge._id} className="flex items-center justify-between p-3 border rounded-lg">
                         <div>
-                          <div className="font-medium">{record.studentName}</div>
-                          <div className="text-sm text-muted-foreground">{record.studentId}</div>
+                          <h4 className="font-medium">
+                            {incharge.className}-{incharge.section}
+                          </h4>
+                          <p className="text-sm text-muted-foreground">
+                            {incharge.teacher?.firstName} {incharge.teacher?.lastName}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {incharge.teacher?.designation}
+                          </p>
                         </div>
-                      </td>
-                      <td className="p-4">{record.class}</td>
-                      <td className="p-4">{getStatusBadge(record.status)}</td>
-                      <td className="p-4">
-                        {record.timeIn ? (
-                          <span className="text-sm">{record.timeIn}</span>
-                        ) : (
-                          <span className="text-sm text-muted-foreground">-</span>
-                        )}
-                      </td>
-                      <td className="p-4">
-                        {record.timeOut ? (
-                          <span className="text-sm">{record.timeOut}</span>
-                        ) : (
-                          <span className="text-sm text-muted-foreground">-</span>
-                        )}
-                      </td>
-                      <td className="p-4">
-                        <div className="flex space-x-2">
-                          <Button size="sm" variant="outline">
-                            <Eye className="h-3 w-3" />
-                          </Button>
-                          <Button size="sm" variant="outline" onClick={() => handleEditRecord(record)}>
-                            <Edit className="h-3 w-3" />
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleRemoveIncharge(incharge._id)}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    ))}
+                    {classIncharges.length === 0 && (
+                      <p className="text-center text-muted-foreground py-4">
+                        No class incharges assigned yet
+                      </p>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Classes without Incharge */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Classes without Incharge</CardTitle>
+                  <CardDescription>Classes that need incharge assignment</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {classes
+                      .filter(cls => !cls.classIncharge)
+                      .map((cls) => (
+                        <div key={cls._id} className="flex items-center justify-between p-3 border rounded-lg">
+                          <div>
+                            <h4 className="font-medium">
+                              {cls.className}-{cls.section}
+                            </h4>
+                            <p className="text-sm text-muted-foreground">
+                              {cls.currentStudents}/{cls.maxStudents} students
+                            </p>
+                          </div>
+                          <Button
+                            size="sm"
+                            onClick={() => {
+                              setSelectedClass(cls)
+                              setIsAssignInchargeDialogOpen(true)
+                            }}
+                          >
+                            <Plus className="h-3 w-3 mr-1" />
+                            Assign
                           </Button>
                         </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                      ))}
+                    {classes.filter(cls => !cls.classIncharge).length === 0 && (
+                      <p className="text-center text-muted-foreground py-4">
+                        All classes have assigned incharges
+                      </p>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
             </div>
+          </TabsContent>
 
-            {filteredAttendance.length === 0 && (
-              <div className="text-center py-8 text-muted-foreground">
-                No attendance records found for the selected criteria.
-              </div>
-            )}
-          </CardContent>
-        </Card>
+          {/* Attendance Records Tab */}
+          <TabsContent value="attendance" className="space-y-6">
+            {/* Filters */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Attendance Records</CardTitle>
+                <CardDescription>View and filter attendance records</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-col md:flex-row gap-4 mb-6">
+                  <div className="flex items-center space-x-2">
+                    <Search className="h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search students..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="w-64"
+                    />
+                  </div>
+                  
+                  <Input
+                    type="date"
+                    value={selectedDate}
+                    onChange={(e) => setSelectedDate(e.target.value)}
+                    className="w-40"
+                  />
+                  
+                  <Select value={classFilter} onValueChange={setClassFilter}>
+                    <SelectTrigger className="w-48">
+                      <SelectValue placeholder="Filter by class" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="All">All Classes</SelectItem>
+                      {classes.map((cls) => (
+                        <SelectItem key={cls._id} value={cls._id}>
+                          {cls.className}-{cls.section}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  
+                  <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger className="w-32">
+                      <SelectValue placeholder="Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="All">All Status</SelectItem>
+                      <SelectItem value="Present">Present</SelectItem>
+                      <SelectItem value="Late">Late</SelectItem>
+                      <SelectItem value="Absent">Absent</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
 
-        {/* Quick Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Bulk Actions</CardTitle>
-              <CardDescription>Perform attendance actions for multiple students</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button className="w-full mb-2">
-                <Users className="h-4 w-4 mr-2" />
-                Mark All Present
-              </Button>
-              <Button className="w-full bg-transparent" variant="outline">
-                Import Attendance
-              </Button>
-            </CardContent>
-          </Card>
+                {/* Attendance Table */}
+                <div className="border rounded-lg overflow-hidden">
+                  <table className="w-full">
+                    <thead className="bg-muted">
+                      <tr>
+                        <th className="p-4 text-left">Student</th>
+                        <th className="p-4 text-left">Class</th>
+                        <th className="p-4 text-left">Date</th>
+                        <th className="p-4 text-left">Status</th>
+                        <th className="p-4 text-left">Marked By</th>
+                        <th className="p-4 text-left">Remarks</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredAttendance.map((record) => (
+                        <tr key={record._id} className="border-t">
+                          <td className="p-4">
+                            <div>
+                              <div className="font-medium">
+                                {record.student?.firstName} {record.student?.lastName}
+                              </div>
+                              <div className="text-sm text-muted-foreground">
+                                Roll: {record.student?.rollNumber}
+                              </div>
+                            </div>
+                          </td>
+                          <td className="p-4">
+                            {record.class?.className}-{record.class?.section}
+                          </td>
+                          <td className="p-4">
+                            {new Date(record.date).toLocaleDateString()}
+                          </td>
+                          <td className="p-4">
+                            {getStatusBadge(record.status)}
+                          </td>
+                          <td className="p-4">
+                            {record.teacher?.firstName} {record.teacher?.lastName}
+                          </td>
+                          <td className="p-4">
+                            {record.remarks || "-"}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  
+                  {filteredAttendance.length === 0 && (
+                    <div className="text-center py-8 text-muted-foreground">
+                      No attendance records found for the selected criteria.
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Reports</CardTitle>
-              <CardDescription>Generate attendance reports and analytics</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button className="w-full mb-2 bg-transparent" variant="outline">
-                Monthly Report
-              </Button>
-              <Button className="w-full bg-transparent" variant="outline">
-                Class-wise Report
-              </Button>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Notifications</CardTitle>
-              <CardDescription>Send attendance notifications to parents</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button className="w-full mb-2">Send Absence Alerts</Button>
-              <Button className="w-full bg-transparent" variant="outline">
-                Daily Summary
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Add Attendance Dialog */}
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Mark Attendance</DialogTitle>
-              <DialogDescription>
-                Add a new attendance record for a student.
-              </DialogDescription>
-            </DialogHeader>
-            <AttendanceForm />
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button onClick={handleAddRecord}>Add Record</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-
-        {/* Edit Attendance Dialog */}
-        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Edit Attendance</DialogTitle>
-              <DialogDescription>
-                Update the attendance record details.
-              </DialogDescription>
-            </DialogHeader>
-            <AttendanceForm isEdit={true} />
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button onClick={handleUpdateRecord}>Update Record</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+          {/* Reports Tab */}
+          <TabsContent value="reports" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Attendance Reports</CardTitle>
+                <CardDescription>Generate and download attendance reports</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-4">
+                    <h3 className="font-semibold">Daily Reports</h3>
+                    <Button className="w-full" variant="outline">
+                      <Download className="h-4 w-4 mr-2" />
+                      Today's Attendance
+                    </Button>
+                    <Button className="w-full" variant="outline">
+                      <Download className="h-4 w-4 mr-2" />
+                      Weekly Summary
+                    </Button>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    <h3 className="font-semibold">Monthly Reports</h3>
+                    <Button className="w-full" variant="outline">
+                      <Download className="h-4 w-4 mr-2" />
+                      Monthly Report
+                    </Button>
+                    <Button className="w-full" variant="outline">
+                      <Download className="h-4 w-4 mr-2" />
+                      Class-wise Analysis
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </main>
+
+      {/* Assign Incharge Dialog */}
+      <Dialog open={isAssignInchargeDialogOpen} onOpenChange={setIsAssignInchargeDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Assign Class Incharge</DialogTitle>
+            <DialogDescription>
+              Select a teacher to assign as class incharge
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div>
+              <Label>Select Class</Label>
+              <Select 
+                value={selectedClass?._id || ""} 
+                onValueChange={(value) => {
+                  const cls = classes.find(c => c._id === value)
+                  setSelectedClass(cls || null)
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Choose a class" />
+                </SelectTrigger>
+                <SelectContent>
+                  {classes
+                    .filter(cls => !cls.classIncharge)
+                    .map((cls) => (
+                      <SelectItem key={cls._id} value={cls._id}>
+                        {cls.className}-{cls.section}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div>
+              <Label>Select Teacher</Label>
+              <Select value={selectedTeacher} onValueChange={setSelectedTeacher}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Choose a teacher" />
+                </SelectTrigger>
+                <SelectContent>
+                  {teachers.map((teacher) => (
+                    <SelectItem key={teacher._id} value={teacher._id}>
+                      {teacher.firstName} {teacher.lastName} - {teacher.designation}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsAssignInchargeDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleAssignIncharge} disabled={!selectedClass || !selectedTeacher}>
+              Assign Incharge
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

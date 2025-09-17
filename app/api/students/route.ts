@@ -9,6 +9,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const status = searchParams.get("status")
     const classFilter = searchParams.get("class")
+    const section = searchParams.get("section")
     const search = searchParams.get("search")
 
     const query: any = {}
@@ -18,11 +19,15 @@ export async function GET(request: NextRequest) {
     if (classFilter && classFilter !== "All") {
       query.class = classFilter
     }
+    if (section && section !== "All") {
+      query.section = section
+    }
     if (search) {
       query.$or = [
         { firstName: { $regex: search, $options: "i" } },
         { lastName: { $regex: search, $options: "i" } },
         { studentId: { $regex: search, $options: "i" } },
+        { rollNumber: { $regex: search, $options: "i" } },
       ]
     }
 

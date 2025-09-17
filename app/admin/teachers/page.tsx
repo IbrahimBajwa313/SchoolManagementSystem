@@ -5,31 +5,45 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { BookOpen, Search, Filter, Download, Plus, Eye, Edit, Trash2, UserCheck, UserX, Award } from "lucide-react"
 import Link from "next/link"
+import AddTeacher from "./AddTeacher"
+import EditTeacher from "./EditTeacher"
 
 interface Teacher {
   _id: string
   teacherId: string
   firstName: string
   lastName: string
+  name?: string
   email: string
   phone: string
+  designation?: string
+  department?: string
   subjects: string[]
   classes: string[]
-  qualification: string
-  experience: number
+  qualifications?: string[]
+  certifications?: string[]
+  specializations?: string[]
+  experienceYears?: number
+  totalExperience?: number
   salary: number
   joiningDate: string
   status: string
+  philosophy?: string
+  teachingPhilosophy?: string
+  publications?: string[]
+  achievements?: string[]
+  skills?: Array<{skillName: string, proficiency: number}>
+  testimonials?: Array<{author: string, relation: string, feedback: string}>
+  profileImage?: string
   address: {
     street: string
     city: string
     state: string
-    pincode: string
+    zipCode: string
+    country: string
   }
   emergencyContact: {
     name: string
@@ -51,15 +65,26 @@ export default function TeacherManagement() {
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
+    name: "",
     email: "",
     phone: "",
+    designation: "",
+    department: "",
     subjects: [] as string[],
     classes: [] as string[],
-    qualification: "",
-    experience: 0,
+    qualifications: [] as string[],
+    certifications: [] as string[],
+    specializations: [] as string[],
+    experienceYears: 0,
     salary: 0,
     joiningDate: "",
     status: "Active",
+    philosophy: "",
+    publications: [] as string[],
+    achievements: [] as string[],
+    skills: [] as Array<{skillName: string, proficiency: number}>,
+    testimonials: [] as Array<{author: string, relation: string, feedback: string}>,
+    profileImage: "",
     address: {
       street: "",
       city: "",
@@ -95,15 +120,26 @@ export default function TeacherManagement() {
     setFormData({
       firstName: "",
       lastName: "",
+      name: "",
       email: "",
       phone: "",
+      designation: "",
+      department: "",
       subjects: [],
       classes: [],
-      qualification: "",
-      experience: 0,
+      qualifications: [],
+      certifications: [],
+      specializations: [],
+      experienceYears: 0,
       salary: 0,
       joiningDate: "",
       status: "Active",
+      philosophy: "",
+      publications: [],
+      achievements: [],
+      skills: [],
+      testimonials: [],
+      profileImage: "",
       address: {
         street: "",
         city: "",
@@ -116,31 +152,6 @@ export default function TeacherManagement() {
         relation: ""
       }
     })
-  }
-
-  const handleAddTeacher = async () => {
-    try {
-      const response = await fetch('/api/teachers', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
-      })
-      
-      const data = await response.json()
-      if (data.success) {
-        fetchTeachers()
-        setIsAddDialogOpen(false)
-        resetForm()
-      }
-    } catch (error) {
-      console.error('Error adding teacher:', error)
-    }
-  }
-
-  const handleEditTeacher = () => {
-    setIsEditDialogOpen(true)
   }
 
   const handleDeleteTeacher = async (teacherId: string) => {
@@ -160,6 +171,11 @@ export default function TeacherManagement() {
     }
   }
 
+  const openEditDialog = (teacher: Teacher) => {
+    setEditingTeacher(teacher)
+    setIsEditDialogOpen(true)
+  }
+
   if (loading) {
     return <div className="flex justify-center items-center min-h-screen">Loading...</div>
   }
@@ -169,166 +185,11 @@ export default function TeacherManagement() {
       teacher.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       teacher.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       teacher.teacherId.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesSubject = subjectFilter === "All" || teacher.subjects.some((s: string) => s.includes(subjectFilter))
+    const matchesSubject = subjectFilter === "All" || teacher.subjects.some((s: string) => s.toLowerCase().includes(subjectFilter.toLowerCase()))
     const matchesStatus = statusFilter === "All" || teacher.status === statusFilter
     return matchesSearch && matchesSubject && matchesStatus
   })
 
-  const TeacherForm = ({ isEdit = false }: { isEdit?: boolean }) => (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-96 overflow-y-auto">
-      <div className="space-y-2">
-        <Label htmlFor="firstName">First Name *</Label>
-        <Input
-          id="firstName"
-          value={formData.firstName}
-          onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-          placeholder="Enter first name"
-        />
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="lastName">Last Name *</Label>
-        <Input
-          id="lastName"
-          value={formData.lastName}
-          onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-          placeholder="Enter last name"
-        />
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="email">Email *</Label>
-        <Input
-          id="email"
-          type="email"
-          value={formData.email}
-          onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-          placeholder="Enter email"
-        />
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="phone">Phone *</Label>
-        <Input
-          id="phone"
-          value={formData.phone}
-          onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-          placeholder="Enter phone number"
-        />
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="qualification">Qualification *</Label>
-        <Input
-          id="qualification"
-          value={formData.qualification}
-          onChange={(e) => setFormData({ ...formData, qualification: e.target.value })}
-          placeholder="Enter qualification"
-        />
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="experience">Experience (Years) *</Label>
-        <Input
-          id="experience"
-          type="number"
-          value={formData.experience}
-          onChange={(e) => setFormData({ ...formData, experience: Number(e.target.value) })}
-          placeholder="Years of experience"
-        />
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="salary">Salary *</Label>
-        <Input
-          id="salary"
-          type="number"
-          value={formData.salary}
-          onChange={(e) => setFormData({ ...formData, salary: Number(e.target.value) })}
-          placeholder="Monthly salary"
-        />
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="joiningDate">Joining Date *</Label>
-        <Input
-          id="joiningDate"
-          type="date"
-          value={formData.joiningDate}
-          onChange={(e) => setFormData({ ...formData, joiningDate: e.target.value })}
-        />
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="status">Status *</Label>
-        <Select value={formData.status} onValueChange={(value) => setFormData({ ...formData, status: value })}>
-          <SelectTrigger>
-            <SelectValue placeholder="Select status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="Active">Active</SelectItem>
-            <SelectItem value="Inactive">Inactive</SelectItem>
-            <SelectItem value="On Leave">On Leave</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-      <div className="space-y-2 md:col-span-2">
-        <Label htmlFor="street">Address *</Label>
-        <Input
-          id="street"
-          value={formData.address.street}
-          onChange={(e) => setFormData({ ...formData, address: { ...formData.address, street: e.target.value } })}
-          placeholder="Street address"
-        />
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="city">City *</Label>
-        <Input
-          id="city"
-          value={formData.address.city}
-          onChange={(e) => setFormData({ ...formData, address: { ...formData.address, city: e.target.value } })}
-          placeholder="City"
-        />
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="state">State *</Label>
-        <Input
-          id="state"
-          value={formData.address.state}
-          onChange={(e) => setFormData({ ...formData, address: { ...formData.address, state: e.target.value } })}
-          placeholder="State"
-        />
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="pincode">Pincode *</Label>
-        <Input
-          id="pincode"
-          value={formData.address.pincode}
-          onChange={(e) => setFormData({ ...formData, address: { ...formData.address, pincode: e.target.value } })}
-          placeholder="Pincode"
-        />
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="emergencyName">Emergency Contact Name *</Label>
-        <Input
-          id="emergencyName"
-          value={formData.emergencyContact.name}
-          onChange={(e) => setFormData({ ...formData, emergencyContact: { ...formData.emergencyContact, name: e.target.value } })}
-          placeholder="Emergency contact name"
-        />
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="emergencyPhone">Emergency Contact Phone *</Label>
-        <Input
-          id="emergencyPhone"
-          value={formData.emergencyContact.phone}
-          onChange={(e) => setFormData({ ...formData, emergencyContact: { ...formData.emergencyContact, phone: e.target.value } })}
-          placeholder="Emergency contact phone"
-        />
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="emergencyRelation">Emergency Contact Relation *</Label>
-        <Input
-          id="emergencyRelation"
-          value={formData.emergencyContact.relation}
-          onChange={(e) => setFormData({ ...formData, emergencyContact: { ...formData.emergencyContact, relation: e.target.value } })}
-          placeholder="Relation"
-        />
-      </div>
-    </div>
-  )
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -353,7 +214,6 @@ export default function TeacherManagement() {
     }
   }
 
-
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -370,29 +230,14 @@ export default function TeacherManagement() {
               </div>
             </div>
             <div className="flex items-center space-x-4">
-              <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Teacher
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-4xl">
-                  <DialogHeader>
-                    <DialogTitle>Add New Teacher</DialogTitle>
-                    <DialogDescription>
-                      Enter the teacher details below to add them to the system.
-                    </DialogDescription>
-                  </DialogHeader>
-                  <TeacherForm />
-                  <DialogFooter>
-                    <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
-                      Cancel
-                    </Button>
-                    <Button onClick={handleAddTeacher}>Add Teacher</Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
+              <Button 
+                className="bg-green-600 hover:bg-green-700"
+                onClick={() => setIsAddDialogOpen(true)}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add Teacher
+              </Button>
+
               <Button variant="outline">
                 <Download className="h-4 w-4 mr-2" />
                 Export
@@ -447,7 +292,7 @@ export default function TeacherManagement() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-purple-600">
-                {teachers.length > 0 ? (teachers.reduce((sum, t) => sum + t.experience, 0) / teachers.length).toFixed(1) : '0'}
+                {teachers.length > 0 ? (teachers.reduce((sum, t) => sum + (t.experienceYears || t.totalExperience || 0), 0) / teachers.length).toFixed(1) : '0'}
               </div>
               <p className="text-xs text-muted-foreground">Years</p>
             </CardContent>
@@ -529,12 +374,12 @@ export default function TeacherManagement() {
                             {teacher.firstName} {teacher.lastName}
                           </div>
                           <div className="text-sm text-muted-foreground">{teacher.teacherId}</div>
-                          <div className="text-xs text-muted-foreground">{teacher.qualification}</div>
+                          <div className="text-xs text-muted-foreground">{teacher.qualifications?.[0] || "No qualifications"}</div>
                         </div>
                       </td>
                       <td className="p-4">
                         <div className="flex flex-wrap gap-1">
-                          {teacher.subjects.map((sub: string, index: number) => (
+                          {(teacher.subjects || []).map((sub: string, index: number) => (
                             <Badge key={index} variant="outline" className="text-xs">
                               {sub}
                             </Badge>
@@ -542,12 +387,12 @@ export default function TeacherManagement() {
                         </div>
                       </td>
                       <td className="p-4">
-                        <div className="text-sm">{teacher.classes.join(", ")}</div>
+                        <div className="text-sm">{(teacher.classes || []).join(", ")}</div>
                       </td>
                       <td className="p-4">
                         <div className="flex items-center">
                           <Award className="h-4 w-4 text-primary mr-1" />
-                          {teacher.experience} years
+                          {teacher.experienceYears || teacher.totalExperience || 0} years
                         </div>
                       </td>
                       <td className="p-4">
@@ -559,10 +404,12 @@ export default function TeacherManagement() {
                       <td className="p-4">{getStatusBadge(teacher.status)}</td>
                       <td className="p-4">
                         <div className="flex space-x-2">
-                          <Button size="sm" variant="outline">
-                            <Eye className="h-3 w-3" />
-                          </Button>
-                          <Button size="sm" variant="outline" onClick={() => handleEditTeacher()}>
+                          <Link href={`/admin/teachers/qualifications?teacherId=${teacher.teacherId}`}>
+                            <Button size="sm" variant="outline" title="View Qualifications">
+                              <Eye className="h-3 w-3" />
+                            </Button>
+                          </Link>
+                          <Button size="sm" variant="outline" onClick={() => openEditDialog(teacher)}>
                             <Edit className="h-3 w-3" />
                           </Button>
                           <Button size="sm" variant="outline" onClick={() => handleDeleteTeacher(teacher._id)}>
@@ -626,6 +473,31 @@ export default function TeacherManagement() {
           </Card>
         </div>
       </main>
+
+      {/* Add Teacher Dialog */}
+      <AddTeacher
+        isOpen={isAddDialogOpen}
+        onClose={() => setIsAddDialogOpen(false)}
+        onSuccess={() => {
+          setIsAddDialogOpen(false)
+          fetchTeachers()
+        }}
+      />
+
+      {/* Edit Teacher Dialog */}
+      <EditTeacher
+        isOpen={isEditDialogOpen}
+        onClose={() => {
+          setIsEditDialogOpen(false)
+          setEditingTeacher(null)
+        }}
+        onSuccess={() => {
+          setIsEditDialogOpen(false)
+          setEditingTeacher(null)
+          fetchTeachers()
+        }}
+        teacher={editingTeacher}
+      />
     </div>
   )
 }
