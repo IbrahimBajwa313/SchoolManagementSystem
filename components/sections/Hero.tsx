@@ -80,7 +80,7 @@ export function Hero() {
           </div>
 
           {/* Right side: Image */}
-          <div className="relative w-full h-[300px] lg:h-[500px]">
+          <div className="relative w-full h-[400px] lg:h-[500px]">
             <Image
               src="hero2.png"
               alt="Modern school building with students"
